@@ -1,0 +1,42 @@
+name: Daily Job Scraping
+
+on:
+  schedule:
+    # Run daily at 6:00 AM UTC (11:30 AM IST)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  scrape-jobs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run job scraper
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        FLASK_ENV: production
+      run: |
+        python -c "
+        from app import JobScraper
+        scraper = JobScraper()
+        scraper.run_scrape()
+        "
+    
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo 'Job scraping failed! Check the logs for details.'
